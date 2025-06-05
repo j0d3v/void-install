@@ -209,7 +209,7 @@ mkswap "${SWAP_FILE}"
 swapon "${SWAP_FILE}"
 
 # Build helper to calculate resume_offset
-RESUME_OFFSET=$(filefrag -v /swapfile | awk 'NR==4 {print $4}' | cut -d. -f1)
+RESUME_OFFSET=$(filefrag -v ${SWAP_FILE} | awk 'NR==4 {print $4}' | cut -d. -f1)
 
 sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/d' /etc/default/grub
 echo "GRUB_CMDLINE_LINUX_DEFAULT=\"rd.auto=1 rd.luks.name=${LUKS_UUID}=${CRYPT_NAME} rd.luks.allow-discards=${LUKS_UUID} resume=UUID=${ROOT_UUID} resume_offset=${RESUME_OFFSET}\"" >>/etc/default/grub
