@@ -2,10 +2,16 @@
 set -euo pipefail
 
 # ==============================================================================
+# VARIABLE DEFINITIONS
+# ==============================================================================
+NEW_USER="jo" # Again to be chaned !
+
+# ==============================================================================
 # 1. INSTALL DESKTOP AND AUDIO PACKAGES
 # ==============================================================================
 echo "1. Installing desktop and audio-related packages..."
-xbps-install -S $(cat packages)
+[[ -f packages ]] || { echo "ERROR: packages file not found."; exit 1; }
+xbps-install -Sy $(xargs < packages)
 
 # ==============================================================================
 # 2. CREATE AUDIO GROUPS (IF MISSING)
@@ -20,6 +26,9 @@ for group in pipewire pulse pulse-access; do
 	fi
 done
 
+usermod -aG pipewire,pulse,pulse-access "$NEW_USER"
+echo "=> User '$NEW_USER' added to audio groups."
+
 # ==============================================================================
 # 3. PIPEWIRE & ALSA CONFIGURATION
 # ==============================================================================
@@ -28,7 +37,11 @@ install -d /etc/pipewire/pipewire.conf.d
 install -d /etc/alsa/conf.d
 
 WP_CONF="/usr/share/examples/wireplumber/10-wireplumber.conf"
-[ -f "$WP_CONF" ] && ln -sf "$WP_CONF" /etc/pipewire/pipewire.conf.d/
+if [ -f "$WP_CONF" ]; then
+	ln -sf "$WP_CONF" /etc/pipewire/pipewire.conf.d/
+else
+	echo "=> WARNING: $WP_CONF not found, skipping wireplumber config link."
+fi
 
 for file in 50-pipewire.conf 99-pipewire-default.conf; do
 	src="/usr/share/alsa/alsa.conf.d/$file"
@@ -44,7 +57,8 @@ ldconfig
 # ==============================================================================
 echo "4. Enabling essential services (elogind and lightdm)..."
 for svc in elogind lightdm; do
-	ln -sf "/etc/sv/${svc}" "/var/service/${svc}"
+	ln -sf "/etc/sv/${svc}" /etc/runit/runsvdir/default/
+	echo "=> Service '$svc' enabled."
 done
 
 # ==============================================================================
@@ -63,6 +77,6 @@ EndSection
 EOF
 
 # ==============================================================================
-# ✅ DONE
+# DONE
 # ==============================================================================
-echo "✅ Setup complete."
+echo "Post-install setup complete."
